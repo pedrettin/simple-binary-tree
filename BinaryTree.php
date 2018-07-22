@@ -5,14 +5,16 @@
 */
 class Node {
 
-	public $left;
-	public $right;
+	public $Left;
+	public $Right;
 	public $value;
+	public $Parent;
 
-	public function __construct ($value, $left = null, $right = null) {
+	public function __construct ($value, $Parent = null, $Left = null, $Right = null) {
 		$this->value = $value;
-		$this->left = $left;
-		$this->right = $right;
+		$this->Left = $Left;
+		$this->Right = $Right;
+		$this->Parent = $Parent;
 	}
 
 }
@@ -22,7 +24,7 @@ class Node {
 */
 class BinaryTree {
 
-	private $root = null;
+	private $Root = null;
 	private $numNodes = 0;
 
 	/**
@@ -30,12 +32,11 @@ class BinaryTree {
 	* @param string|int $value
 	*/
 	public function push ($value) {
-		if (!$this->root) {
-			$this->root = new Node($value);
+		if (!$this->Root) {
+			$this->Root = new Node($value);
 			$this->numNodes++;
-		}
-		else {
-			$this->pushToNode($value, $this->root);
+		} else {
+			$this->pushWrapped($value, $this->Root);
 		}
 	}
 
@@ -43,18 +44,18 @@ class BinaryTree {
 	* Pushes the passed in value in the correct place in the tree givent the node
 	* to start from
 	* @param string|int $value
-	* @param Node $node
+	* @param Node $Node
 	*/
-	private function pushToNode ($value, $node) {
-		if ($value > $node->value && $node->right) {
-			$this->pushToNode($value, $node->right);
-		} else if ($value > $node->value) {
-			$node->right = $this->createLeaf($value);
+	private function pushWrapped ($value, $Node) {
+		if ($value > $Node->value && $Node->Right) {
+			$this->pushWrapped($value, $Node->Right);
+		} else if ($value > $Node->value) {
+			$Node->Right = $this->createLeaf($value, $Node);
 			$this->numNodes++;
-		} else if ($value < $node->value && $node->left) {
-			$this->pushToNode($value, $node->left);
-		} else if ($value < $node->value) {
-			$node->left = $this->createLeaf($value);
+		} else if ($value < $Node->value && $Node->Left) {
+			$this->pushWrapped($value, $Node->Left);
+		} else if ($value < $Node->value) {
+			$Node->Left = $this->createLeaf($value, $Node);
 			$this->numNodes++;
 		}
 	}
@@ -62,10 +63,11 @@ class BinaryTree {
 	/**
 	* Creates a new node with the passed in value and returns it
 	* @param string|int $value
+	* @param Node $Parent
 	* @return Node
 	*/
-	private function createLeaf ($value) {
-		return new Node ($value);
+	private function createLeaf ($value, $Parent) {
+		return new Node ($value, $Parent);
 	}
 
 	/**
@@ -73,25 +75,94 @@ class BinaryTree {
 	* @return boolean
 	*/
 	public function find ($value) {
-		if (!$this->root) { return false; }
+		if (!$this->Root) { return false; }
 		else {
-			return $this->findFromNode($value, $this->root);
+			// double exclamation point to turn value into boolean
+			return !! $this->findWrapped($value, $this->Root);
 		}
 	}
 
 	/**
-	* Checks if $value is present or not in the tree starting from $node
+	* Checks if $value is present or not in the tree starting from $Node
+	* @param string|int $value
+	* @param Node $Node
 	*/
-	public function findFromNode ($value, $node) {
-		if ($node->value == $value) {
-			return true;
-		} else if ($node->value < $value && $node->right) {
-			return $this->findFromNode($value, $node->right);
-		} else if ($node->value > $value && $node->left) {
-			return $this->findFromNode($value, $node->left);
+	public function findWrapped ($value, $Node) {
+		if ($Node->value == $value) {
+			return $Node;
+		} else if ($Node->value < $value && $Node->Right) {
+			return $this->findWrapped($value, $Node->Right);
+		} else if ($Node->value > $value && $Node->Left) {
+			return $this->findWrapped($value, $Node->Left);
 		} else {
 			return false;
 		}
+	}
+
+	/**
+	* Removes node with $value from the tree
+	* @param string|int $value
+	*/
+	public function remove ($value) {
+		if ($this->Root) {
+			$this->removeWrapped($value, $this->Root);
+		}
+	}
+
+	/**
+	* Removes node with $value from tree starting from $Node
+	* @param string|int $value
+	* @param Node $Node
+	*/
+	public function removeWrapped ($value, $Node) {
+		$NodeToRemove = $this->findWrapped($value, $Node);
+		if (!$NodeToRemove) { return; }
+		if (!($NodeToRemove->Right && $NodeToRemove->Left)) {
+			$this->removeNoOrOneChildren($NodeToRemove->Parent, $NodeToRemove);
+		} else {
+			$this->removeTwoChildren($NodeToRemove);
+		}
+		$this->numNodes--;
+	}
+
+	/**
+	* Removes a node that has 0 or 1 children
+	* It does not work for nodes that have 2 children
+	* @param Node $Parent
+	* @param Node $NodeToRemove
+	*/
+	private function removeNoOrOneChildren ($Parent, $NodeToRemove) {
+		$NodeToAssign = $NodeToRemove->Right ? $NodeToRemove->Right : $NodeToRemove->Left;
+		if ($Parent->value > $NodeToRemove->value) {
+			$Parent->Left = $NodeToAssign;
+		} else {
+			$Parent->Right = $NodeToAssign;
+		}
+	}
+
+	/**
+	* Removes a node that has 2 children
+	* @param Node $Parent
+	* @param Node $NodeToRemove
+	*/
+	private function removeTwoChildren ($NodeToRemove) {
+		$NodeToRemove->value = $NodeToRemove->Left->value;
+		$LeftNodeRightBranch = $NodeToRemove->Left->Right;
+		$NodeToRemove->Left = $NodeToRemove->Left->Left;
+		$SmallestChildRightBranchNodeToRemove = $this->findLeftMostChild($NodeToRemove);
+		$SmallestChildRightBranchNodeToRemove->Left = $LeftNodeRightBranch;
+	}
+
+	/**
+	* Finds the left most child -- smallest -- in a tree
+	* @param Node $Node
+	* @return Node
+	*/
+	private function findLeftMostChild ($Node) {
+		if (!$Node->Left) {
+			return $Node;
+		}
+		return $this->findLeftMostChild($Node->Left);
 	}
 
 	/**
@@ -101,6 +172,5 @@ class BinaryTree {
 	public function getNumNodes () {
 		return $this->numNodes;
 	}
-
 
 }

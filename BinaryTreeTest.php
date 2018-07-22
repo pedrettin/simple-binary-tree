@@ -15,8 +15,6 @@ class BinaryTreeTest extends TestCase {
 		$Tree->push(10);
 		$this->assertTrue($Tree->getNumNodes() == 1);
 		return $Tree;
-		$Tree->push(10);
-		$this->assertTrue($Tree->getNumNodes() == 1);
 	}
 
 	/**
@@ -73,6 +71,43 @@ class BinaryTreeTest extends TestCase {
 		$this->assertFalse($Tree->find(1));
 		$this->assertFalse($Tree->find(0));
 		$this->assertFalse($Tree->find("hi"));
+	}
+
+	/**
+	* @depends testPushSeveralElements
+	*/
+	public function testRemoveNoChildren ($Tree) {
+		$Tree->remove(3);
+		$this->assertFalse($Tree->find(3));
+		$this->assertTrue($Tree->getNumNodes() == 6);
+		return $Tree;
+	}
+
+	/**
+	* @depends testRemoveNoChildren
+	*/
+	public function testRemoveOneChild ($Tree) {
+		$Tree->remove(15);
+		$this->assertFalse($Tree->find(15));
+		$this->assertTrue($Tree->getNumNodes() == 5);
+		return $Tree;
+	}
+
+	/**
+	* @depends testRemoveOneChild
+	*/
+	public function testRemoveTwoChildren ($Tree) {
+		$Tree->push(3);
+		$Tree->push(1);
+		$Tree->push(2);
+		$Tree->remove(5);
+		$this->assertTrue($Tree->find(2));
+		$this->assertTrue($Tree->find(1));
+		$this->assertTrue($Tree->find(3));
+		$this->assertFalse($Tree->find(5));
+		$this->assertFalse($Tree->find(15));
+		$this->assertTrue($Tree->find(10));
+		$this->assertTrue($Tree->getNumNodes() == 7);
 	}
 
 }
